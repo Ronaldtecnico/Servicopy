@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="theme-color" content="#0a3d2e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>ServiCopy — Control de Fotocopiadoras</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  /* ── Reset & Variables ─────────────────────────────── */
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg:        #0d1f1a;
+    --surface:   #122b22;
+    --card:      #1a3a2e;
+    --border:    #2a5040;
+    --accent:    #2dca8c;
+    --accent2:   #f0b429;
+    --danger:    #e05a5a;
+    --text:      #e8f5ef;
+    --muted:     #7ab898;
+    --dim:       #4a7a62;
+    --font-head: 'Syne', sans-serif;
+    --font-body: 'DM Sans', sans-serif;
+    --font-mono: 'DM Mono', monospace;
+    --radius:    14px;
+    --radius-sm: 8px;
+  }
+
+  html, body {
+    height: 100%;
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 15px;
+    line-height: 1.5;
+    overflow: hidden;
+  }
+
+  /* ── App Shell ─────────────────────────────────────── */
+  #app {
+    display: flex;
+    flex-direction: column;
+    height: 100dvh;
+    max-width: 480px;
+    margin: 0 auto;
+    position: relative;
+    overflow: hidden;
+  }
+
+  /* ── Top Bar ────────────────────────────────────────── */
+  .topbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 20px 10px;
+    background: var(--bg);
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .topbar-brand {
+    display: flex; align-items: center; gap: 10px;
+  }
+  .topbar-logo {
+    width: 36px; height: 36px;
+    background: var(--accent);
+    border-radius: 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-family: var(--font-head);
+    font-size: 13px; font-weight: 800;
+    color: var(--bg);
+    letter-spacing: -0.5px;
+    flex-shrink: 0;
+  }
+  .topbar-title {
+    font-family: var(--font-head);
+    font-size: 17px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.3px;
+  }
+  .topbar-sub {
+    font-size: 11px; color: var(--muted);
+    font-family: var(--font-mono);
+  }
+  .topbar-action {
+    width: 38px; height: 38px;
+    border-radius: 10px;
+    background: var(--accent);
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--bg); font-size: 22px; font-weight: 300;
+    transition: transform 0.15s, opacity 0.15s;
+    flex-shrink: 0;
+  }
+  .topbar-action:active { transform: scale(0.92); opacity: 0.85; }
+
+  /* ── Screens ─────────────────────────────────────────── */
+  .screen {
+    flex: 1; overflow-y: auto; overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    display: none;
+    flex-direction: column;
+  }
+  .screen.active { display: flex; }
+
+  /* ── Bottom Nav ──────────────────────────────────────── */
+  .bottomnav {
+    display: flex;
+    background: var(--surface);
+    border-top: 1px solid var(--border);
+    flex-shrink: 0;
+    z-index: 10;
+  }
+  .nav-btn {
+    flex: 1; border: none; background: none; cursor: pointer;
+    padding: 10px 4px 8px;
+    display: flex; flex-direction: column;
+    align-items: center; gap: 3px;
+    transition: color 0.2s;
+    color: var(--dim);
+  }
+  .nav-btn.active { color: var(--accent); }
+  .nav-btn svg { width: 22px; height: 22px; }
+  .nav-btn span { font-size: 10px; font-family: var(--font-mono); letter-spacing: 0.3px; }
+
+  /* ── Cards ───────────────────────────────────────────── */
+  .section-header {
+    padding: 18px 20px 8px;
+    font-family: var(--font-head);
+    font-size: 20px; font-weight: 700;
+    color: var(--text);
+    letter-spacing: -0.4px;
+  }
+  .section-sub {
+    padding: 0 20px 12px;
+    font-size: 12px; color: var(--muted);
+    font-family: var(--font-mono);
+  }
+
+  .card {
+    margin: 0 16px 12px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.15s;
+  }
+  .card:active { transform: scale(0.985); }
+
+  .machine-card {
+    display: flex; align-items: center;
+    padding: 14px 16px; gap: 14px;
+    cursor: pointer;
+  }
+  .machine-icon {
+    width: 48px; height: 48px;
+    background: linear-gradient(135deg, var(--accent) 0%, #1a9e6a 100%);
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 22px; flex-shrink: 0;
+  }
+  .machine-info { flex: 1; min-width: 0; }
+  .machine-name {
+    font-family: var(--font-head);
+    font-size: 15px; font-weight: 700;
+    color: var(--text); white-space: nowrap;
+    overflow: hidden; text-overflow: ellipsis;
+  }
+  .machine-meta {
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--muted);
+    margin-top: 2px;
+  }
+  .machine-badge {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 4px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--muted);
+    flex-shrink: 0;
+  }
+  .machine-badge.ok { color: var(--accent); border-color: var(--accent); }
+  .machine-badge.warn { color: var(--accent2); border-color: var(--accent2); }
+  .machine-badge.bad { color: var(--danger); border-color: var(--danger); }
+  .card-chevron {
+    color: var(--dim); font-size: 18px; flex-shrink: 0;
+    margin-left: 4px;
+  }
+
+  /* ── Empty State ─────────────────────────────────────── */
+  .empty-state {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 60px 30px;
+    gap: 12px; color: var(--dim); text-align: center;
+  }
+  .empty-state svg { width: 64px; height: 64px; opacity: 0.4; }
+  .empty-state p { font-size: 14px; color: var(--muted); max-width: 220px; }
+
+  /* ── Form ────────────────────────────────────────────── */
+  .form-wrap {
+    padding: 16px 16px 20px;
+    display: flex; flex-direction: column; gap: 14px;
+  }
+  .form-row { display: flex; gap: 10px; }
+  .field { display: flex; flex-direction: column; gap: 6px; flex: 1; }
+  .field label {
+    font-family: var(--font-mono);
+    font-size: 10px; font-weight: 500;
+    color: var(--muted); letter-spacing: 0.5px;
+    text-transform: uppercase;
+  }
+  .field input, .field select, .field textarea {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 11px 13px;
+    color: var(--text);
+    font-family: var(--font-body);
+    font-size: 14px;
+    width: 100%;
+    outline: none;
+    transition: border-color 0.2s;
+    -webkit-appearance: none;
+  }
+  .field select {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%237ab898' stroke-width='2'%3E%3Cpath d='M6 9l6 6 6-6'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 36px;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus {
+    border-color: var(--accent);
+  }
+  .field textarea { resize: none; min-height: 80px; }
+  .field input::placeholder, .field textarea::placeholder { color: var(--dim); }
+  .field select option { background: var(--card); }
+
+  /* Tipo checkboxes */
+  .tipo-grid {
+    display: grid; grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+  .tipo-btn {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 9px 12px;
+    background: var(--surface);
+    color: var(--muted);
+    font-family: var(--font-mono);
+    font-size: 12px; cursor: pointer;
+    text-align: center;
+    transition: all 0.18s;
+    -webkit-user-select: none; user-select: none;
+  }
+  .tipo-btn.selected {
+    border-color: var(--accent);
+    background: rgba(45,202,140,0.12);
+    color: var(--accent);
+  }
+
+  /* ── Buttons ─────────────────────────────────────────── */
+  .btn {
+    border: none; border-radius: var(--radius-sm);
+    padding: 13px 20px;
+    font-family: var(--font-head);
+    font-size: 15px; font-weight: 700;
+    cursor: pointer; transition: all 0.18s;
+    width: 100%; letter-spacing: -0.2px;
+  }
+  .btn-primary { background: var(--accent); color: var(--bg); }
+  .btn-primary:active { transform: scale(0.97); opacity: 0.9; }
+  .btn-ghost {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    color: var(--muted);
+  }
+  .btn-danger { background: rgba(224,90,90,0.15); color: var(--danger); border: 1px solid var(--danger); }
+
+  /* ── Service Record Cards ─────────────────────────────── */
+  .record-card {
+    margin: 0 16px 10px;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    overflow: hidden;
+  }
+  .record-top {
+    display: flex; align-items: center;
+    padding: 12px 14px; gap: 10px;
+    border-bottom: 1px solid var(--border);
+  }
+  .record-date {
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+    padding: 6px 10px;
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--accent2);
+    flex-shrink: 0;
+    text-align: center; line-height: 1.3;
+  }
+  .record-date strong { display: block; font-size: 16px; color: var(--accent2); }
+  .record-type-badge {
+    padding: 4px 10px;
+    border-radius: 20px;
+    font-family: var(--font-mono);
+    font-size: 10px; font-weight: 500;
+    flex-shrink: 0;
+  }
+  .record-tech {
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--muted);
+    flex: 1; text-align: right;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+  }
+  .record-body { padding: 10px 14px; }
+  .record-desc {
+    font-size: 13px; color: var(--text);
+    line-height: 1.5; margin-bottom: 8px;
+  }
+  .record-footer {
+    display: flex; gap: 8px; flex-wrap: wrap;
+  }
+  .record-pill {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    padding: 3px 10px;
+    font-family: var(--font-mono);
+    font-size: 10px; color: var(--muted);
+  }
+  .record-pill.cost { color: var(--accent2); border-color: rgba(240,180,41,0.3); }
+  .record-pill.parts { color: var(--accent); border-color: rgba(45,202,140,0.3); }
+
+  /* ── Detail Screen ───────────────────────────────────── */
+  .detail-hero {
+    margin: 16px;
+    background: linear-gradient(135deg, var(--card) 0%, #0f2a22 100%);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    display: flex; align-items: center; gap: 16px;
+  }
+  .detail-hero-icon {
+    width: 60px; height: 60px;
+    background: linear-gradient(135deg, var(--accent), #1a9e6a);
+    border-radius: 16px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 28px; flex-shrink: 0;
+  }
+  .detail-hero-title {
+    font-family: var(--font-head);
+    font-size: 18px; font-weight: 800; color: var(--text);
+    letter-spacing: -0.4px;
+  }
+  .detail-hero-meta {
+    font-family: var(--font-mono);
+    font-size: 11px; color: var(--muted); margin-top: 3px;
+  }
+
+  .stats-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+    margin: 0 16px 16px;
+  }
+  .stat-box {
+    flex: 1;
+    background: var(--card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 12px;
+    text-align: center;
+  }
+  .stat-val {
+    font-family: var(--font-head);
+    font-size: 22px; font-weight: 800; color: var(--accent);
+  }
+  .stat-lbl {
+    font-family: var(--font-mono);
+    font-size: 10px; color: var(--muted); margin-top: 2px;
+  }
+
+  /* ── FAB ─────────────────────────────────────────────── */
+  .fab {
+    position: fixed; bottom: 80px; right: 20px;
+    width: 56px; height: 56px;
+    background: var(--accent);
+    border-radius: 50%;
+    border: none; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 26px; color: var(--bg); font-weight: 300;
+    box-shadow: 0 4px 20px rgba(45,202,140,0.4);
+    transition: transform 0.18s, box-shadow 0.18s;
+    z-index: 20;
+  }
+  .fab:active { transform: scale(0.92); box-shadow: 0 2px 10px rgba(45,202,140,0.3); }
+
+  /* ── Modal ────────────────────────────────────────────── */
+  .modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 100;
+    display: none; align-items: flex-end;
+    backdrop-filter: blur(4px);
+  }
+  .modal-overlay.open { display: flex; }
+  .modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 20px 20px 0 0;
+    width: 100%;
+    max-height: 90dvh;
+    overflow-y: auto;
+    animation: slideUp 0.25s ease;
+  }
+  @keyframes slideUp {
+    from { transform: translateY(100%); }
+    to   { transform: translateY(0); }
+  }
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--border);
+    border-radius: 2px;
+    margin: 12px auto 16px;
+  }
+  .modal-title {
+    font-family: var(--font-head);
+    font-size: 18px; font-weight: 700;
+    color: var(--text); padding: 0 20px 4px;
+    letter-spacing: -0.3px;
+  }
+  .modal-actions {
+    display: flex; gap: 10px;
+    padding: 16px 16px 24px;
+  }
+
+  /* ── Toast ────────────────────────────────────────────── */
+  .toast {
+    position: fixed; top: 20px; left: 50%;
+    transform: translateX(-50%) translateY(-80px);
+    background: var(--accent);
+    color: var(--bg);
+    font-family: var(--font-mono); font-size: 13px;
+    padding: 10px 20px; border-radius: 30px;
+    z-index: 999; transition: transform 0.3s;
+    white-space: nowrap;
+  }
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  /* ── Back button ─────────────────────────────────────── */
+  .back-btn {
+    border: none; background: none; cursor: pointer;
+    display: flex; align-items: center; gap: 6px;
+    color: var(--accent); font-size: 14px;
+    font-family: var(--font-body);
+    padding: 14px 20px 4px;
+  }
+  .back-btn:active { opacity: 0.7; }
+
+  /* Divider */
+  .divider {
+    height: 1px; background: var(--border);
+    margin: 4px 16px 12px;
+  }
+
+  /* Tipo color map */
+  .t-mp { background: rgba(45,202,140,0.15); color: var(--accent); }
+  .t-mc { background: rgba(240,180,41,0.15); color: var(--accent2); }
+  .t-rp { background: rgba(224,90,90,0.15); color: var(--danger); }
+  .t-rt { background: rgba(180,100,255,0.15); color: #c084fc; }
+  .t-in { background: rgba(100,160,255,0.15); color: #7ab4ff; }
+  .t-ot { background: rgba(150,150,150,0.15); color: var(--muted); }
+
+  /* Scroll padding */
+  .scroll-pad { height: 20px; flex-shrink: 0; }
+
+  /* Estado equipo badge */
+  .estado-chip {
+    display: inline-flex; align-items: center; gap: 5px;
+    padding: 4px 12px; border-radius: 20px;
+    font-family: var(--font-mono); font-size: 11px;
+    margin-top: 4px;
+  }
+  .estado-chip::before {
+    content: ''; width: 7px; height: 7px; border-radius: 50%;
+  }
+  .estado-ok { background: rgba(45,202,140,0.15); color: var(--accent); }
+  .estado-ok::before { background: var(--accent); }
+  .estado-warn { background: rgba(240,180,41,0.15); color: var(--accent2); }
+  .estado-warn::before { background: var(--accent2); }
+  .estado-bad { background: rgba(224,90,90,0.15); color: var(--danger); }
+  .estado-bad::before { background: var(--danger); }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <!-- TOP BAR -->
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-logo">SC</div>
+      <div>
+        <div class="topbar-title">ServiCopy</div>
+        <div class="topbar-sub">Control de equipos</div>
+      </div>
+    </div>
+    <button class="topbar-action" id="mainAddBtn" title="Agregar">＋</button>
+  </div>
+
+  <!-- SCREEN: EQUIPOS -->
+  <div class="screen active" id="screen-equipos">
+    <div class="section-header">Mis Fotocopiadoras</div>
+    <div class="section-sub" id="equipo-count">0 equipos registrados</div>
+    <div id="equipo-list"></div>
+    <div class="empty-state" id="equipo-empty" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <path d="M7 5V3h10v2M7 19v2h10v-2M12 9v6M9 12h6"/>
+      </svg>
+      <p>Aún no tienes fotocopiadoras.<br>Toca + para agregar la primera.</p>
+    </div>
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- SCREEN: DETALLE EQUIPO -->
+  <div class="screen" id="screen-detalle">
+    <button class="back-btn" id="backBtn">‹ Volver</button>
+    <div class="detail-hero" id="detail-hero"></div>
+    <div class="stats-row" id="detail-stats"></div>
+    <div class="section-header" style="padding-top:4px">Historial de Servicios</div>
+    <div class="section-sub" id="detail-count"></div>
+    <div id="detail-records"></div>
+    <div class="empty-state" id="detail-empty" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.2">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2"/>
+      </svg>
+      <p>Sin registros de servicio.<br>Toca + para agregar el primero.</p>
+    </div>
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- SCREEN: RESUMEN -->
+  <div class="screen" id="screen-resumen">
+    <div class="section-header">Resumen General</div>
+    <div class="section-sub">Todos los equipos</div>
+    <div id="resumen-content" style="padding:0 16px"></div>
+    <div class="scroll-pad"></div>
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav class="bottomnav">
+    <button class="nav-btn active" data-screen="equipos">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <rect x="2" y="5" width="20" height="14" rx="2"/>
+        <path d="M7 5V3h10v2"/>
+      </svg>
+      <span>Equipos</span>
+    </button>
+    <button class="nav-btn" data-screen="detalle" id="navDetalle" style="display:none">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2M9 12h6M9 16h4"/>
+      </svg>
+      <span>Historial</span>
+    </button>
+    <button class="nav-btn" data-screen="resumen">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8">
+        <path d="M18 20V10M12 20V4M6 20v-6"/>
+      </svg>
+      <span>Resumen</span>
+    </button>
+  </nav>
+
+</div><!-- /app -->
+
+<!-- MODAL: Agregar Equipo -->
+<div class="modal-overlay" id="modal-equipo">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title" id="modal-equipo-title">Nueva Fotocopiadora</div>
+    <div class="form-wrap">
+      <div class="form-row">
+        <div class="field">
+          <label>Marca *</label>
+          <input type="text" id="eq-marca" placeholder="Canon, Xerox…">
+        </div>
+        <div class="field">
+          <label>Modelo *</label>
+          <input type="text" id="eq-modelo" placeholder="iR2625i">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>No. Serie</label>
+          <input type="text" id="eq-serie" placeholder="SN-12345">
+        </div>
+        <div class="field">
+          <label>No. Inventario</label>
+          <input type="text" id="eq-inventario" placeholder="INV-001">
+        </div>
+      </div>
+      <div class="field">
+        <label>Ubicación / Área</label>
+        <input type="text" id="eq-ubicacion" placeholder="Recepción, Contabilidad…">
+      </div>
+      <div class="field">
+        <label>Responsable</label>
+        <input type="text" id="eq-responsable" placeholder="Nombre del responsable">
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Contador inicial</label>
+          <input type="number" id="eq-contador-ini" placeholder="0" min="0">
+        </div>
+        <div class="field">
+          <label>Contador actual</label>
+          <input type="number" id="eq-contador" placeholder="0" min="0">
+        </div>
+      </div>
+      <div class="field">
+        <label>Estado actual</label>
+        <select id="eq-estado">
+          <option value="ok">✅ Operando correctamente</option>
+          <option value="warn">⚠️ Requiere seguimiento</option>
+          <option value="bad">🔴 Fuera de servicio</option>
+        </select>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelEquipo">Cancelar</button>
+      <button class="btn btn-primary" id="saveEquipo">Guardar equipo</button>
+    </div>
+  </div>
+</div>
+
+<!-- MODAL: Agregar Servicio -->
+<div class="modal-overlay" id="modal-servicio">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">Nuevo Registro de Servicio</div>
+    <div class="form-wrap">
+      <div class="field">
+        <label>Fecha *</label>
+        <input type="date" id="sv-fecha">
+      </div>
+      <div class="field">
+        <label>Contador al momento del servicio</label>
+        <input type="number" id="sv-contador" placeholder="Ej. 125400" min="0">
+      </div>
+      <div class="field">
+        <label>Tipo de servicio</label>
+        <div class="tipo-grid" id="tipo-grid">
+          <div class="tipo-btn selected" data-tipo="MP">🔧 Mant. Preventivo</div>
+          <div class="tipo-btn" data-tipo="MC">⚙️ Mant. Correctivo</div>
+          <div class="tipo-btn" data-tipo="RP">🔨 Reparación</div>
+          <div class="tipo-btn" data-tipo="RT">🖤 Recarga Tóner</div>
+          <div class="tipo-btn" data-tipo="IN">📦 Instalación</div>
+        </div>
+      </div>
+      <div class="field">
+        <label>Descripción / Problema *</label>
+        <textarea id="sv-desc" placeholder="Describe el problema reportado o trabajo realizado…"></textarea>
+      </div>
+      <div class="field">
+        <label>Piezas cambiadas</label>
+        <input type="text" id="sv-piezas" placeholder="Tóner, drum, fusor… (opcional)">
+      </div>
+      <div class="form-row">
+        <div class="field">
+          <label>Técnico</label>
+          <input type="text" id="sv-tecnico" placeholder="Nombre">
+        </div>
+        <div class="field">
+          <label>Costo ($)</label>
+          <input type="number" id="sv-costo" placeholder="0.00" min="0" step="0.01">
+        </div>
+      </div>
+      <div class="field">
+        <label>Estado del equipo al finalizar</label>
+        <select id="sv-estado">
+          <option value="ok">✅ Operando correctamente</option>
+          <option value="warn">⚠️ Requiere seguimiento</option>
+          <option value="bad">🔴 Fuera de servicio / Pendiente</option>
+        </select>
+      </div>
+      <div class="field">
+        <label>Observaciones adicionales</label>
+        <textarea id="sv-obs" placeholder="Notas, recomendaciones…" style="min-height:60px"></textarea>
+      </div>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-ghost" id="cancelServicio">Cancelar</button>
+      <button class="btn btn-primary" id="saveServicio">Guardar servicio</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ════════════════════════════════════════════════════════
+// STORAGE
+// ════════════════════════════════════════════════════════
+const STORE_KEY = 'servicopy_v2';
+
+function loadData() {
+  try {
+    return JSON.parse(localStorage.getItem(STORE_KEY)) || { equipos: [] };
+  } catch { return { equipos: [] }; }
+}
+function saveData(d) {
+  localStorage.setItem(STORE_KEY, JSON.stringify(d));
+}
+
+let db = loadData();
+let currentEquipoId = null;
+let editEquipoId = null;
+
+// ════════════════════════════════════════════════════════
+// NAVIGATION
+// ════════════════════════════════════════════════════════
+const screens = {
+  equipos: document.getElementById('screen-equipos'),
+  detalle: document.getElementById('screen-detalle'),
+  resumen: document.getElementById('screen-resumen'),
+};
+const navBtns = document.querySelectorAll('.nav-btn[data-screen]');
+
+function goTo(name) {
+  Object.values(screens).forEach(s => s.classList.remove('active'));
+  navBtns.forEach(b => b.classList.remove('active'));
+  if (screens[name]) screens[name].classList.add('active');
+  document.querySelector(`.nav-btn[data-screen="${name}"]`)?.classList.add('active');
+  // scroll to top
+  if (screens[name]) screens[name].scrollTop = 0;
+}
+
+navBtns.forEach(btn => {
+  btn.addEventListener('click', () => {
+    const s = btn.dataset.screen;
+    if (s === 'resumen') renderResumen();
+    if (s === 'detalle' && currentEquipoId) renderDetalle(currentEquipoId);
+    goTo(s);
+  });
+});
+
+// Main add btn context
+document.getElementById('mainAddBtn').addEventListener('click', () => {
+  const active = document.querySelector('.screen.active');
+  if (active?.id === 'screen-detalle' && currentEquipoId) {
+    openModalServicio();
+  } else {
+    openModalEquipo();
+  }
+});
+
+document.getElementById('backBtn').addEventListener('click', () => {
+  goTo('equipos');
+  renderEquipos();
+});
+
+// ════════════════════════════════════════════════════════
+// UTILS
+// ════════════════════════════════════════════════════════
+function uid() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 6); }
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const [y, m, d] = iso.split('-');
+  const ms = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+  return `${d} ${ms[+m-1]} ${y}`;
+}
+
+function tipoClass(t) {
+  return { MP:'t-mp', MC:'t-mc', RP:'t-rp', RT:'t-rt', IN:'t-in' }[t] || 't-ot';
+}
+function tipoLabel(t) {
+  return { MP:'Mant. Preventivo', MC:'Mant. Correctivo', RP:'Reparación', RT:'Recarga Tóner', IN:'Instalación' }[t] || 'Otro';
+}
+function estadoChip(e) {
+  const map = {
+    ok:   ['estado-ok',  'Operando'],
+    warn: ['estado-warn','Seguimiento'],
+    bad:  ['estado-bad', 'Fuera de servicio'],
+  };
+  const [cls, lbl] = map[e] || map.ok;
+  return `<span class="estado-chip ${cls}">${lbl}</span>`;
+}
+
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 2200);
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER EQUIPOS
+// ════════════════════════════════════════════════════════
+function renderEquipos() {
+  const list = document.getElementById('equipo-list');
+  const empty = document.getElementById('equipo-empty');
+  const count = document.getElementById('equipo-count');
+  list.innerHTML = '';
+
+  const equipos = db.equipos;
+  count.textContent = equipos.length === 1 ? '1 equipo registrado' : `${equipos.length} equipos registrados`;
+
+  if (!equipos.length) { empty.style.display = 'flex'; return; }
+  empty.style.display = 'none';
+
+  equipos.forEach(eq => {
+    const servicios = eq.servicios || [];
+    const last = servicios[servicios.length - 1];
+    const badgeMap = { ok: 'ok', warn: 'warn', bad: 'bad' };
+    const badgeLabel = { ok: 'Operando', warn: 'Seguimiento', bad: 'Fuera servicio' };
+    const bc = badgeMap[eq.estado] || 'ok';
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.innerHTML = `
+      <div class="machine-card">
+        <div class="machine-icon">🖨️</div>
+        <div class="machine-info">
+          <div class="machine-name">${eq.marca} ${eq.modelo}</div>
+          <div class="machine-meta">
+            ${eq.serie ? 'SN: ' + eq.serie + ' · ' : ''}${eq.ubicacion || 'Sin ubicación'}
+          </div>
+          <div class="machine-meta" style="color:var(--accent2)">
+            ${eq.contador ? '🔢 Contador: ' + Number(eq.contador).toLocaleString('es-MX') : ''}
+          </div>
+          ${estadoChip(eq.estado)}
+        </div>
+        <div class="machine-badge ${bc}">${servicios.length} serv.</div>
+        <div class="card-chevron">›</div>
+      </div>`;
+    card.addEventListener('click', () => {
+      currentEquipoId = eq.id;
+      document.getElementById('navDetalle').style.display = '';
+      renderDetalle(eq.id);
+      goTo('detalle');
+    });
+    // Long press to edit
+    let pressTimer;
+    card.addEventListener('touchstart', () => {
+      pressTimer = setTimeout(() => openModalEquipo(eq.id), 600);
+    }, { passive: true });
+    card.addEventListener('touchend', () => clearTimeout(pressTimer), { passive: true });
+
+    list.appendChild(card);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER DETALLE
+// ════════════════════════════════════════════════════════
+function renderDetalle(id) {
+  const eq = db.equipos.find(e => e.id === id);
+  if (!eq) return;
+  const servicios = eq.servicios || [];
+
+  // Hero
+  document.getElementById('detail-hero').innerHTML = `
+    <div class="detail-hero-icon">🖨️</div>
+    <div>
+      <div class="detail-hero-title">${eq.marca} ${eq.modelo}</div>
+      <div class="detail-hero-meta">
+        ${eq.serie ? 'SN: ' + eq.serie : 'Sin serie'}
+        ${eq.inventario ? ' · INV: ' + eq.inventario : ''}
+      </div>
+      <div class="detail-hero-meta">${eq.ubicacion || ''} ${eq.responsable ? '· ' + eq.responsable : ''}</div>
+      ${estadoChip(eq.estado)}
+    </div>`;
+
+  // Stats — compute latest counter from servicios or equipo
+  const lastSvConContador = [...servicios].reverse().find(s => s.contador);
+  const contadorActual = lastSvConContador ? lastSvConContador.contador : (eq.contador || null);
+  const contadorInicial = eq.contadorIni || 0;
+  const copiasTotales = contadorActual ? (+contadorActual - +contadorInicial) : null;
+
+  const totalCosto = servicios.reduce((s, r) => s + (+r.costo || 0), 0);
+  const lastDate = servicios.length ? fmtDate(servicios[servicios.length-1].fecha) : '—';
+  document.getElementById('detail-stats').innerHTML = `
+    <div class="stat-box">
+      <div class="stat-val">${servicios.length}</div>
+      <div class="stat-lbl">Servicios</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="font-size:${contadorActual ? '15px' : '22px'};padding-top:${contadorActual ? '6px' : '0'}">
+        ${contadorActual ? Number(contadorActual).toLocaleString('es-MX') : '—'}
+      </div>
+      <div class="stat-lbl">Contador actual</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val">$${totalCosto.toLocaleString('es-MX', {minimumFractionDigits:0, maximumFractionDigits:0})}</div>
+      <div class="stat-lbl">Costo total</div>
+    </div>
+    <div class="stat-box">
+      <div class="stat-val" style="font-size:13px;padding-top:4px">${lastDate}</div>
+      <div class="stat-lbl">Último serv.</div>
+    </div>`;
+
+  // Records
+  const recList = document.getElementById('detail-records');
+  const recEmpty = document.getElementById('detail-empty');
+  const recCount = document.getElementById('detail-count');
+  recList.innerHTML = '';
+  recCount.textContent = servicios.length
+    ? `${servicios.length} registro${servicios.length > 1 ? 's' : ''}`
+    : '';
+
+  if (!servicios.length) { recEmpty.style.display = 'flex'; return; }
+  recEmpty.style.display = 'none';
+
+  // Newest first
+  [...servicios].reverse().forEach(sv => {
+    const [y, m, d] = (sv.fecha || '----').split('-');
+    const ms = ['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
+    const div = document.createElement('div');
+    div.className = 'record-card';
+    div.innerHTML = `
+      <div class="record-top">
+        <div class="record-date">
+          <strong>${d || '--'}</strong>${ms[(+m)-1] || '---'} ${y || '--'}
+        </div>
+        <span class="record-type-badge ${tipoClass(sv.tipo)}">${tipoLabel(sv.tipo)}</span>
+        <span class="record-tech">${sv.tecnico || '—'}</span>
+      </div>
+      <div class="record-body">
+        <div class="record-desc">${sv.desc || '—'}</div>
+        <div class="record-footer">
+          ${sv.contador ? `<span class="record-pill" style="color:var(--accent2);border-color:rgba(240,180,41,0.3)">🔢 ${Number(sv.contador).toLocaleString('es-MX')}</span>` : ''}
+          ${sv.piezas ? `<span class="record-pill parts">🔩 ${sv.piezas}</span>` : ''}
+          ${sv.costo ? `<span class="record-pill cost">💲${(+sv.costo).toLocaleString('es-MX',{minimumFractionDigits:2,maximumFractionDigits:2})}</span>` : ''}
+          ${sv.obs ? `<span class="record-pill">📝 ${sv.obs.slice(0,30)}${sv.obs.length>30?'…':''}</span>` : ''}
+        </div>
+      </div>`;
+    // Swipe left hint / tap to delete (long press)
+    let pressT;
+    div.addEventListener('touchstart', () => {
+      pressT = setTimeout(() => {
+        if (confirm(`¿Eliminar este registro de servicio?`)) {
+          eq.servicios = eq.servicios.filter(s => s.id !== sv.id);
+          saveData(db);
+          renderDetalle(id);
+          showToast('Registro eliminado');
+        }
+      }, 700);
+    }, { passive: true });
+    div.addEventListener('touchend', () => clearTimeout(pressT), { passive: true });
+
+    recList.appendChild(div);
+  });
+}
+
+// ════════════════════════════════════════════════════════
+// RENDER RESUMEN
+// ════════════════════════════════════════════════════════
+function renderResumen() {
+  const el = document.getElementById('resumen-content');
+  const equipos = db.equipos;
+  if (!equipos.length) {
+    el.innerHTML = '<div class="empty-state" style="display:flex"><p>Sin datos aún. Agrega tu primer equipo.</p></div>';
+    return;
+  }
+  const totalEquipos = equipos.length;
+  const totalServicios = equipos.reduce((s, e) => s + (e.servicios?.length || 0), 0);
+  const totalCosto = equipos.reduce((s, e) => s + (e.servicios||[]).reduce((a,r) => a + (+r.costo||0), 0), 0);
+  const operando = equipos.filter(e => e.estado === 'ok').length;
+  const seguimiento = equipos.filter(e => e.estado === 'warn').length;
+  const fuera = equipos.filter(e => e.estado === 'bad').length;
+
+  // Tipo breakdown
+  const tipos = {};
+  equipos.forEach(e => (e.servicios||[]).forEach(s => { tipos[s.tipo] = (tipos[s.tipo]||0)+1; }));
+
+  el.innerHTML = `
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px">
+      <div class="stat-box"><div class="stat-val">${totalEquipos}</div><div class="stat-lbl">Equipos</div></div>
+      <div class="stat-box"><div class="stat-val">${totalServicios}</div><div class="stat-lbl">Servicios totales</div></div>
+      <div class="stat-box"><div class="stat-val">$${totalCosto.toLocaleString('es-MX',{maximumFractionDigits:0})}</div><div class="stat-lbl">Gasto acumulado</div></div>
+      <div class="stat-box"><div class="stat-val">${totalServicios && totalEquipos ? (totalServicios/totalEquipos).toFixed(1) : 0}</div><div class="stat-lbl">Serv. por equipo</div></div>
+    </div>
+
+    <div class="section-header" style="padding:4px 0 8px;font-size:15px">Estado de equipos</div>
+    <div class="card" style="margin:0 0 16px">
+      <div style="padding:12px 16px;display:flex;gap:12px">
+        <div style="flex:1;text-align:center">
+          <div style="font-family:var(--font-head);font-size:22px;font-weight:800;color:var(--accent)">${operando}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Operando</div>
+        </div>
+        <div style="flex:1;text-align:center">
+          <div style="font-family:var(--font-head);font-size:22px;font-weight:800;color:var(--accent2)">${seguimiento}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Seguimiento</div>
+        </div>
+        <div style="flex:1;text-align:center">
+          <div style="font-family:var(--font-head);font-size:22px;font-weight:800;color:var(--danger)">${fuera}</div>
+          <div style="font-family:var(--font-mono);font-size:10px;color:var(--muted)">Fuera serv.</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section-header" style="padding:4px 0 8px;font-size:15px">Tipos de servicio</div>
+    <div class="card" style="margin:0 0 16px">
+      ${Object.entries(tipos).length ? Object.entries(tipos).map(([t,c])=>`
+        <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border)">
+          <span class="record-type-badge ${tipoClass(t)}" style="margin-right:10px">${tipoLabel(t)}</span>
+          <div style="flex:1;background:var(--surface);border-radius:4px;height:6px;overflow:hidden">
+            <div style="background:var(--accent);height:100%;width:${Math.round(c/totalServicios*100)}%;border-radius:4px"></div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--muted);margin-left:10px">${c}</span>
+        </div>`).join('') : '<div style="padding:16px;color:var(--dim);font-size:13px;text-align:center">Sin servicios aún</div>'}
+    </div>
+
+    <div class="section-header" style="padding:4px 0 8px;font-size:15px">Equipos más intervenidos</div>
+    <div class="card" style="margin:0 0 24px">
+      ${equipos.slice().sort((a,b)=>(b.servicios?.length||0)-(a.servicios?.length||0)).slice(0,5).map(e=>`
+        <div style="display:flex;align-items:center;padding:10px 16px;border-bottom:1px solid var(--border);gap:10px">
+          <div style="font-size:20px">🖨️</div>
+          <div style="flex:1">
+            <div style="font-size:13px;font-weight:500;color:var(--text)">${e.marca} ${e.modelo}</div>
+            <div style="font-size:11px;color:var(--muted);font-family:var(--font-mono)">${e.ubicacion||'Sin ubicación'}</div>
+          </div>
+          <span style="font-family:var(--font-mono);font-size:12px;color:var(--accent)">${e.servicios?.length||0} serv.</span>
+        </div>`).join('')}
+    </div>
+  `;
+}
+
+// ════════════════════════════════════════════════════════
+// MODAL EQUIPO
+// ════════════════════════════════════════════════════════
+function openModalEquipo(id = null) {
+  editEquipoId = id;
+  const eq = id ? db.equipos.find(e => e.id === id) : null;
+  document.getElementById('modal-equipo-title').textContent = id ? 'Editar Fotocopiadora' : 'Nueva Fotocopiadora';
+  document.getElementById('eq-marca').value = eq?.marca || '';
+  document.getElementById('eq-modelo').value = eq?.modelo || '';
+  document.getElementById('eq-serie').value = eq?.serie || '';
+  document.getElementById('eq-inventario').value = eq?.inventario || '';
+  document.getElementById('eq-ubicacion').value = eq?.ubicacion || '';
+  document.getElementById('eq-responsable').value = eq?.responsable || '';
+  document.getElementById('eq-contador-ini').value = eq?.contadorIni || '';
+  document.getElementById('eq-contador').value = eq?.contador || '';
+  document.getElementById('eq-estado').value = eq?.estado || 'ok';
+  document.getElementById('modal-equipo').classList.add('open');
+}
+document.getElementById('cancelEquipo').addEventListener('click', () => {
+  document.getElementById('modal-equipo').classList.remove('open');
+});
+document.getElementById('modal-equipo').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+document.getElementById('saveEquipo').addEventListener('click', () => {
+  const marca = document.getElementById('eq-marca').value.trim();
+  const modelo = document.getElementById('eq-modelo').value.trim();
+  if (!marca || !modelo) { showToast('⚠️ Marca y modelo son requeridos'); return; }
+
+  if (editEquipoId) {
+    const eq = db.equipos.find(e => e.id === editEquipoId);
+    if (eq) {
+      eq.marca = marca; eq.modelo = modelo;
+      eq.serie = document.getElementById('eq-serie').value.trim();
+      eq.inventario = document.getElementById('eq-inventario').value.trim();
+      eq.ubicacion = document.getElementById('eq-ubicacion').value.trim();
+      eq.responsable = document.getElementById('eq-responsable').value.trim();
+      eq.contadorIni = document.getElementById('eq-contador-ini').value;
+      eq.contador = document.getElementById('eq-contador').value;
+      eq.estado = document.getElementById('eq-estado').value;
+    }
+    showToast('✅ Equipo actualizado');
+  } else {
+    db.equipos.push({
+      id: uid(),
+      marca, modelo,
+      serie: document.getElementById('eq-serie').value.trim(),
+      inventario: document.getElementById('eq-inventario').value.trim(),
+      ubicacion: document.getElementById('eq-ubicacion').value.trim(),
+      responsable: document.getElementById('eq-responsable').value.trim(),
+      contadorIni: document.getElementById('eq-contador-ini').value,
+      contador: document.getElementById('eq-contador').value,
+      estado: document.getElementById('eq-estado').value,
+      servicios: [],
+    });
+    showToast('✅ Equipo registrado');
+  }
+  saveData(db);
+  document.getElementById('modal-equipo').classList.remove('open');
+  renderEquipos();
+});
+
+// ════════════════════════════════════════════════════════
+// MODAL SERVICIO
+// ════════════════════════════════════════════════════════
+let selectedTipo = 'MP';
+
+function openModalServicio() {
+  const today = new Date().toISOString().split('T')[0];
+  document.getElementById('sv-fecha').value = today;
+  document.getElementById('sv-contador').value = '';
+  document.getElementById('sv-desc').value = '';
+  document.getElementById('sv-piezas').value = '';
+  document.getElementById('sv-tecnico').value = '';
+  document.getElementById('sv-costo').value = '';
+  document.getElementById('sv-obs').value = '';
+  document.getElementById('sv-estado').value = 'ok';
+  // Pre-fill with equipo's current counter if available
+  const eq = db.equipos.find(e => e.id === currentEquipoId);
+  if (eq?.contador) document.getElementById('sv-contador').value = eq.contador;
+  selectedTipo = 'MP';
+  document.querySelectorAll('.tipo-btn').forEach(b => {
+    b.classList.toggle('selected', b.dataset.tipo === 'MP');
+  });
+  document.getElementById('modal-servicio').classList.add('open');
+}
+
+document.querySelectorAll('.tipo-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    selectedTipo = btn.dataset.tipo;
+    document.querySelectorAll('.tipo-btn').forEach(b => b.classList.remove('selected'));
+    btn.classList.add('selected');
+  });
+});
+
+document.getElementById('cancelServicio').addEventListener('click', () => {
+  document.getElementById('modal-servicio').classList.remove('open');
+});
+document.getElementById('modal-servicio').addEventListener('click', e => {
+  if (e.target === e.currentTarget) e.currentTarget.classList.remove('open');
+});
+document.getElementById('saveServicio').addEventListener('click', () => {
+  const desc = document.getElementById('sv-desc').value.trim();
+  const fecha = document.getElementById('sv-fecha').value;
+  if (!desc || !fecha) { showToast('⚠️ Fecha y descripción son requeridos'); return; }
+
+  const eq = db.equipos.find(e => e.id === currentEquipoId);
+  if (!eq) return;
+
+  const estadoSv = document.getElementById('sv-estado').value;
+  const contadorSv = document.getElementById('sv-contador').value;
+  eq.servicios.push({
+    id: uid(), fecha, tipo: selectedTipo, desc,
+    contador: contadorSv,
+    piezas: document.getElementById('sv-piezas').value.trim(),
+    tecnico: document.getElementById('sv-tecnico').value.trim(),
+    costo: document.getElementById('sv-costo').value,
+    obs: document.getElementById('sv-obs').value.trim(),
+    estado: estadoSv,
+  });
+  eq.estado = estadoSv;
+  // Update equipo's current counter if provided
+  if (contadorSv) eq.contador = contadorSv;
+
+  saveData(db);
+  document.getElementById('modal-servicio').classList.remove('open');
+  renderDetalle(currentEquipoId);
+  showToast('✅ Servicio registrado');
+});
+
+// ════════════════════════════════════════════════════════
+// INIT
+// ════════════════════════════════════════════════════════
+renderEquipos();
+</script>
+</body>
+</html>
